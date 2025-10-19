@@ -59,7 +59,8 @@ struct MarkdownView: NSViewRepresentable {
         // Handle scroll target
         if let target = scrollTarget {
             textView.scrollRangeToVisible(target.nsRange)
-            DispatchQueue.main.async {
+            // Clear scroll target outside of the view update
+            Task { @MainActor in
                 scrollTarget = nil
             }
         }

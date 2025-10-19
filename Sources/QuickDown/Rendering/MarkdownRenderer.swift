@@ -159,6 +159,60 @@ private struct AttributedStringVisitor: MarkupVisitor {
         return result
     }
 
+    mutating func visitUnorderedList(_ unorderedList: UnorderedList) -> NSMutableAttributedString {
+        let result = NSMutableAttributedString()
+        for child in unorderedList.children {
+            result.append(visit(child))
+        }
+        return result
+    }
+
+    mutating func visitOrderedList(_ orderedList: OrderedList) -> NSMutableAttributedString {
+        let result = NSMutableAttributedString()
+        var itemNumber = Int(orderedList.startIndex)
+        for child in orderedList.children {
+            if let listItem = child as? ListItem {
+                let itemResult = visitListItem(listItem, number: itemNumber, isOrdered: true)
+                result.append(itemResult)
+                itemNumber += 1
+            } else {
+                result.append(visit(child))
+            }
+        }
+        return result
+    }
+
+    mutating func visitListItem(_ listItem: ListItem) -> NSMutableAttributedString {
+        visitListItem(listItem, number: nil, isOrdered: false)
+    }
+
+    private mutating func visitListItem(_ listItem: ListItem, number: Int?, isOrdered: Bool) -> NSMutableAttributedString {
+        let result = NSMutableAttributedString()
+
+        // Add list marker with indentation
+        let marker = isOrdered ? "\(number ?? 1). " : "• "
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.firstLineHeadIndent = 0
+        paragraphStyle.headIndent = 20
+        paragraphStyle.lineHeightMultiple = configuration.paragraphConfiguration.lineHeight
+        paragraphStyle.alignment = nsTextAlignment(from: configuration.paragraphConfiguration.alignment)
+
+        var markerAttributes = currentAttributes
+        markerAttributes[.paragraphStyle] = paragraphStyle
+
+        result.append(NSAttributedString(string: marker, attributes: markerAttributes))
+
+        // Add list item content
+        for child in listItem.children {
+            result.append(visit(child))
+        }
+
+        // Add newline after list item
+        result.append(NSAttributedString(string: "\n", attributes: markerAttributes))
+
+        return result
+    }
+
     // MARK: - Attribute Builders
 
     private func baseAttributes() -> [NSAttributedString.Key: Any] {
